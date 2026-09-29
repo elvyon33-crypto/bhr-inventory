@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b63ce">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>BHR Inventory</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#e5e7eb;--blue:#0b63ce;--green:#138a52;--orange:#b77900;--red:#c62828;--shadow:0 8px 24px rgba(16,24,40,.07)}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink)} button,input,select,textarea{font:inherit} button{cursor:pointer}
+.top{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:800;font-size:20px} .brand span{color:var(--blue)} .wrap{max-width:1400px;margin:auto;padding:18px}
+.nav{display:flex;gap:8px;overflow:auto;padding:10px 0 4px} .nav button{border:0;background:#fff;padding:10px 13px;border-radius:10px;color:#475467;white-space:nowrap} .nav button.active{background:var(--blue);color:#fff}
+.page{display:none} .page.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px} .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)} .stat .label{font-size:13px;color:var(--muted)} .stat .num{font-size:30px;font-weight:800;margin-top:4px}
+h1,h2,h3{margin:0 0 10px} .sub{color:var(--muted);font-size:13px} .section{margin-top:16px}
+.toolbar{display:flex;flex-wrap:wrap;gap:9px;align-items:end;margin-bottom:14px} .field{display:flex;flex-direction:column;gap:5px;min-width:150px} .field label{font-size:12px;color:var(--muted);font-weight:700} input,select,textarea{border:1px solid #d0d5dd;border-radius:9px;padding:9px 10px;background:#fff;color:var(--ink)} textarea{min-height:80px;resize:vertical}
+.btn{border:0;border-radius:9px;padding:9px 13px;font-weight:700} .primary{background:var(--blue);color:#fff} .secondary{background:#eef4ff;color:#1456a0} .danger{background:#fee4e2;color:#b42318} .ghost{background:#f2f4f7;color:#344054}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff} table{width:100%;border-collapse:collapse;min-width:900px} th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top} th{background:#f8fafc;position:sticky;top:0;font-size:12px;color:#475467} tr:last-child td{border-bottom:0}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800} .ok{background:#e7f6ee;color:#137443} .low{background:#fff2d6;color:#8a5a00} .out{background:#fee4e2;color:#b42318} .received{background:#e7f6ee;color:#137443} .issued{background:#eef4ff;color:#175cd3} .used{background:#f3e8ff;color:#7a35b1}
+.modal{position:fixed;inset:0;background:rgba(16,24,40,.48);display:none;align-items:center;justify-content:center;z-index:50;padding:15px} .modal.open{display:flex} .modalbox{background:#fff;width:min(720px,100%);max-height:90vh;overflow:auto;border-radius:16px;padding:18px} .formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.notice{padding:11px 13px;border-radius:10px;background:#eef4ff;color:#174ea6;font-size:13px;margin-bottom:12px}
+.search{min-width:260px} .empty{padding:35px;text-align:center;color:var(--muted)}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}} @media(max-width:600px){.wrap{padding:12px}.grid{grid-template-columns:1fr 1fr}.formgrid{grid-template-columns:1fr}.top{padding:12px}}
+@media print{.top,.nav,.no-print,.toolbar{display:none!important}body{background:#fff}.wrap{max-width:none;padding:0}.card{box-shadow:none;border:0}table{min-width:0}th,td{font-size:9px;padding:5px}h1{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="top"><div class="brand">BHR <span>Inventory</span></div><div class="sub">Offline stock control</div></div>
+<div class="wrap">
+<div class="nav">
+<button data-page="dashboard" class="active">📊 Dashboard</button>
+<button data-page="inventory">📦 Inventory</button>
+<button data-page="transactions">🔄 Transactions</button>
+<button data-page="orders">🚚 Incoming Orders</button>
+<button data-page="reports">📈 Reports</button>
+<button data-page="backup">💾 Backup</button>
+</div>
+
+<section id="dashboard" class="page active">
+<h1>Inventory Dashboard</h1><div class="sub">Based on your HVAC stock workbook. Works offline.</div>
+<div class="grid section">
+<div class="card stat"><div class="label">Active Items</div><div class="num" id="sItems">0</div></div>
+<div class="card stat"><div class="label">Items OK</div><div class="num" id="sOk">0</div></div>
+<div class="card stat"><div class="label">Low / Out of Stock</div><div class="num" id="sLow">0</div></div>
+<div class="card stat"><div class="label">Pending Deliveries</div><div class="num" id="sOrders">0</div></div>
+</div>
+<div class="grid section">
+<div class="card"><h3>Stock Movement</h3><div class="sub">All recorded transactions</div><h2 id="sTx">0</h2></div>
+<div class="card"><h3>Received</h3><h2 id="sReceived">0</h2></div>
+<div class="card"><h3>Issued</h3><h2 id="sIssued">0</h2></div>
+<div class="card"><h3>Used</h3><h2 id="sUsed">0</h2></div>
+</div>
+<div class="card section"><h3>Low Stock Items</h3><div id="lowList"></div></div>
+</section>
+
+<section id="inventory" class="page">
+<h1>Stock Inventory</h1><div class="sub">Live closing quantity is calculated from opening stock and transactions.</div>
+<div class="toolbar section">
+<div class="field search"><label>Search</label><input id="invSearch" placeholder="Code, description, category..."></div>
+<div class="field"><label>System</label><select id="invSystem"><option value="">All systems</option></select></div>
+<div class="field"><label>Status</label><select id="invStatus"><option value="">All</option><option>OK</option><option>LOW</option><option>OUT</option></select></div>
+<button class="btn primary" onclick="openItem()">＋ Add Item</button>
+<button class="btn secondary" onclick="exportCSV('inventory')">Export CSV</button>
+</div>
+<div class="table-wrap"><table><thead><tr><th>No.</th><th>Item Code</th><th>System</th><th>Description</th><th>Category</th><th>Unit</th><th>Opening</th><th>Received</th><th>Issued</th><th>Used</th><th>Closing</th><th>Min</th><th>Status</th><th class="no-print">Actions</th></tr></thead><tbody id="invBody"></tbody></table></div>
+</section>
+
+<section id="transactions" class="page">
+<h1>Stock Transactions</h1><div class="sub">One row for every Received, Issued or Used movement.</div>
+<div class="toolbar section">
+<div class="field"><label>From</label><input type="date" id="txFrom"></div><div class="field"><label>To</label><input type="date" id="txTo"></div>
+<div class="field search"><label>Search</label><input id="txSearch" placeholder="Item, reference, person, location..."></div>
+<div class="field"><label>Type</label><select id="txType"><option value="">All</option><option>Received</option><option>Issued</option><option>Used</option></select></div>
+<button class="btn primary" onclick="openTx()">＋ Add Transaction</button><button class="btn secondary" onclick="exportCSV('transactions')">Export CSV</button>
+</div>
+<div class="table-wrap"><table><thead><tr><th>Date</th><th>Reference</th><th>Item</th><th>Description</th><th>Type</th><th>Qty</th><th>Unit</th><th>By</th><th>Location</th><th>Remarks</th><th class="no-print">Actions</th></tr></thead><tbody id="txBody"></tbody></table></div>
+</section>
+
+<section id="orders" class="page">
+<h1>Incoming Orders</h1><div class="sub">Track proforma lines and quantities still waiting to arrive.</div>
+<div class="toolbar section"><div class="field search"><label>Search</label><input id="ordSearch" placeholder="Proforma, item, description..."></div>
+<select id="ordStatus"><option value="">All statuses</option><option>Waiting to Receive</option><option>Partially Received</option><option>Received</option></select>
+<button class="btn primary" onclick="openOrder()">＋ Add Order</button><button class="btn secondary" onclick="exportCSV('orders')">Export CSV</button></div>
+<div class="table-wrap"><table><thead><tr><th>Proforma Date</th><th>Proforma No.</th><th>Item</th><th>Description</th><th>Ordered</th><th>Received</th><th>Waiting</th><th>Status</th><th>Received Date</th><th>Notes</th><th class="no-print">Actions</th></tr></thead><tbody id="ordBody"></tbody></table></div>
+</section>
+
+<section id="reports" class="page">
+<h1>Reports</h1><div class="toolbar section">
+<div class="field"><label>Year</label><input type="number" id="repYear" min="2020" max="2100"></div>
+<div class="field"><label>Month</label><select id="repMonth"></select></div>
+<button class="btn primary" onclick="renderReport()">Refresh</button><button class="btn secondary" onclick="window.print()">🖨️ Print / Save PDF</button><button class="btn secondary" onclick="exportCSV('monthly')">Export Monthly CSV</button>
+</div>
+<div class="card"><h2 id="reportTitle"></h2><div class="sub" id="reportSub"></div><div class="section table-wrap"><table><thead><tr><th>No.</th><th>Item Code</th><th>Description</th><th>Unit</th><th>Opening</th><th>Received</th><th>Issued</th><th>Used</th><th>Closing</th><th>Minimum</th><th>Status</th></tr></thead><tbody id="reportBody"></tbody></table></div></div>
+<div class="card section"><h3>Monthly Movement Summary</h3><div class="table-wrap"><table><thead><tr><th>Month</th><th>Received</th><th>Issued</th><th>Used</th><th>Total Entries</th></tr></thead><tbody id="monthBody"></tbody></table></div></div>
+</section>
+
+<section id="backup" class="page">
+<h1>Backup & Restore</h1><div class="notice">Keep a JSON backup regularly. It preserves your inventory, transactions and incoming orders.</div>
+<div class="toolbar"><button class="btn primary" onclick="backup()">💾 Backup Everything</button><button class="btn secondary" onclick="document.getElementById('restoreFile').click()">♻️ Restore Backup</button><input id="restoreFile" type="file" accept=".json" style="display:none"></div>
+<div class="card"><h3>Data safety</h3><p class="sub">The app is offline-first and stores data locally on the device. The backup file is your independent copy.</p></div>
+</section>
+</div>
+
+<div id="modal" class="modal"><div class="modalbox"><div style="display:flex;justify-content:space-between;align-items:center"><h2 id="modalTitle"></h2><button class="btn ghost" onclick="closeModal()">✕</button></div><div id="modalBody"></div></div></div>
+
+<script>
+const SEED={"items": [{"no": 1, "code": "HV-001", "system": "CONSUMABLES", "description": "Copper Pipe 1/4\"", "category": "Copper & Fittings", "unit": "m", "opening": 5, "minimum": 1}, {"no": 2, "code": "HV-002", "system": "CONSUMABLES", "description": "Copper Pipe 3/8\"", "category": "Copper & Fittings", "unit": "m", "opening": 5, "minimum": 1}, {"no": 3, "code": "HV-003", "system": "CONSUMABLES", "description": "Copper Pipe 1/2\"", "category": "Copper & Fittings", "unit": "m", "opening": 5, "minimum": 1}, {"no": 4, "code": "HV-004", "system": "CONSUMABLES", "description": "Copper Pipe 5/8\"", "category": "Copper & Fittings", "unit": "m", "opening": 5, "minimum": 1}, {"no": 5, "code": "HV-005", "system": "CONSUMABLES", "description": "Refrigerant R410A", "category": "Refrigerant", "unit": "kg", "opening": 5, "minimum": 1}, {"no": 6, "code": "HV-006", "system": "CONSUMABLES", "description": "Refrigerant R32", "category": "Refrigerant", "unit": "kg", "opening": 5, "minimum": 1}, {"no": 7, "code": "HV-007", "system": "CONSUMABLES", "description": "Refrigerant R404A", "category": "Refrigerant", "unit": "kg", "opening": 5, "minimum": 1}, {"no": 8, "code": "HV-008", "system": "COLDROOM/FREEZER", "description": "Filter Drier", "category": "Refrigeration", "unit": "pcs", "opening": 5, "minimum": 1}, {"no": 9, "code": "HV-009", "system": "COLDROOM/FREEZER", "description": "Solenoid Valve", "category": "Refrigeration", "unit": "pcs", "opening": 5, "minimum": 1}, {"no": 10, "code": "HV-010", "system": "COLDROOM/FREEZER", "description": "EEV / Expansion Valve", "category": "Refrigeration", "unit": "pcs", "opening": 5, "minimum": 1}, {"no": 11, "code": "HV-011", "system": "CONSUMABLES", "description": "Contactor", "category": "Electrical", "unit": "pcs", "opening": 5, "minimum": 1}, {"no": 12, "code": "HV-012", "system": "SPLT UNITS", "description": "Capacitor", "category": "Electrical", "unit": "pcs", "opening": 5, "minimum": 1}, {"no": 13, "code": "HV-013", "system": "CONSUMABLES", "description": "MCB", "category": "Electrical", "unit": "pcs", "opening": 5, "minimum": 1}, {"no": 14, "code": "HV-014", "system": "CONSUMABLES", "description": "Electrical Cable", "category": "Electrical", "unit": "m", "opening": 5, "minimum": 1}, {"no": 15, "code": "HV-015", "system": "COLDROOM/FREEZER", "description": "Temperature Sensor", "category": "Controls", "unit": "pcs", "opening": 5, "minimum": 1}, {"no": 16, "code": "KCM517LAL-E512H", "system": "COLDROOM/FREEZER", "description": "380v Comp R404 LBP Rotolock", "category": "Compressors / Outdoor Units", "unit": "pcs", "opening": 0, "minimum": 1}, {"no": 17, "code": "KCM514CAL-E512H", "system": "COLDROOM/FREEZER", "description": "380v Comp R404 MHBP Rotolock", "category": "Compressors / Outdoor Units", "unit": "pcs", "opening": 0, "minimum": 1}, {"no": 18, "code": "DLLTK517BZT", "system": "COLDROOM/FREEZER", "description": "DynaLite CDU Incl Controller 517", "category": "Compressors / Outdoor Units", "unit": "pcs", "opening": 0, "minimum": 1}, {"no": 19, "code": "DLMTK514AZT", "system": "COLDROOM/FREEZER", "description": "DynaLite CDU Incl Controller 514", "category": "Compressors / Outdoor Units", "unit": "pcs", "opening": 0, "minimum": 1}, {"no": 20, "code": "SNET", "system": "DVM'S", "description": "SAMSUNG SNET DONGLE", "category": "Tools", "unit": "pcs", "opening": 1, "minimum": 0}, {"no": 21, "code": "HPLP", "system": "COLDROOM/FREEZER", "description": "HP/LP MANUAL PRESSURE SWITCH", "category": "Controls", "unit": "pcs", "opening": 5, "minimum": 1}, {"no": 22, "code": "CAP", "system": "COLDROOM/FREEZER", "description": "CAPILLARY COIL", "category": "Copper & Fittings", "unit": "pcs", "opening": 10, "minimum": 1}, {"no": 23, "code": "TCUT", "system": "CONSUMABLES", "description": "TUBE CUTTER 1/8 TO 1 1/8", "category": "Tools", "unit": "pcs", "opening": 1, "minimum": 1}, {"no": 24, "code": "VIBROPIPE", "system": "CONSUMABLES", "description": "VIBRO 7/8 FLEX PIPE", "category": "Copper & Fittings", "unit": "pcs", "opening": 15, "minimum": 1}, {"no": 25, "code": "VIBROPIPE-1", "system": "CONSUMABLES", "description": "VIBRO 1/2 FLEX PIPE", "category": "Copper & Fittings", "unit": "pcs", "opening": 15, "minimum": 1}, {"no": 26, "code": "FCONTR", "system": "AHU'S", "description": "FAN SPEED CONTROLLER", "category": "Controls", "unit": "pcs", "opening": 5, "minimum": 1}, {"no": 27, "code": "FLUSHFLUD", "system": "CONSUMABLES", "description": "FLUSHING LIQIUD", "category": "Consumables", "unit": "pcs", "opening": 5, "minimum": 1}, {"no": 28, "code": "MODCONTR", "system": "CONSUMABLES", "description": "25A MODULAR CONTACTOR ", "category": "Electrical", "unit": "pcs", "opening": 10, "minimum": 1}, {"no": 29, "code": "AXU18A", "system": "CONSUMABLES", "description": "CONTACTOR 18A AXU", "category": "Electrical", "unit": "pcs", "opening": 5, "minimum": 1}], "transactions": [{"id": "tx-5", "date": "2026-09-25", "ref": "", "code": "HV-008", "description": "Filter Drier", "type": "Issued", "qty": 1.0, "unit": "pcs", "by": "", "location": "", "remarks": ""}, {"id": "tx-6", "date": "2026-09-25", "ref": "", "code": "HV-008", "description": "Filter Drier", "type": "Issued", "qty": 1.0, "unit": "pcs", "by": "", "location": "", "remarks": ""}, {"id": "tx-7", "date": "2026-09-25", "ref": "", "code": "HV-008", "description": "Filter Drier", "type": "Issued", "qty": 1.0, "unit": "pcs", "by": "", "location": "", "remarks": ""}, {"id": "tx-8", "date": "2026-09-25", "ref": "", "code": "HV-008", "description": "Filter Drier", "type": "Issued", "qty": 1.0, "unit": "pcs", "by": "", "location": "", "remarks": ""}, {"id": "tx-9", "date": "2026-06-02", "ref": "BHR030626.01", "code": "KCM517LAL-E512H", "description": "380v Comp R404 LBP Rotolock", "type": "Received", "qty": 2.0, "unit": "pcs", "by": "Warehouse", "location": "Cold Room / Freezer", "remarks": "Received against proforma invoice"}, {"id": "tx-10", "date": "2026-06-02", "ref": "BHR030626.01", "code": "KCM514CAL-E512H", "description": "380v Comp R404 MHBP Rotolock", "type": "Received", "qty": 2.0, "unit": "pcs", "by": "Warehouse", "location": "Cold Room / Freezer", "remarks": "Received against proforma invoice"}, {"id": "tx-11", "date": "2026-06-25", "ref": "BHR250826.23", "code": "SNET", "description": "SAMSUNG SNET DONGLE", "type": "Received", "qty": 1.0, "unit": "pcs", "by": "Warehouse", "location": "AHU", "remarks": ""}, {"id": "tx-12", "date": "2026-06-25", "ref": "BHR250826.23", "code": "HPLP", "description": "HP/LP MANUAL PRESSURE SWITCH", "type": "Received", "qty": 5.0, "unit": "pcs", "by": "Warehouse", "location": "", "remarks": ""}, {"id": "tx-13", "date": "2026-06-25", "ref": "BHR250826.23", "code": "CAP", "description": "CAPILLARY COIL", "type": "Received", "qty": 10.0, "unit": "pcs", "by": "Warehouse", "location": "", "remarks": ""}, {"id": "tx-14", "date": "2026-06-25", "ref": "BHR250826.23", "code": "TCUT", "description": "TUBE CUTTER 1/8 TO 1 1/8", "type": "Received", "qty": 1.0, "unit": "pcs", "by": "Warehouse", "location": "", "remarks": ""}, {"id": "tx-15", "date": "2026-06-25", "ref": "BHR250826.23", "code": "VIBROPIPE", "description": "VIBRO 7/8 FLEX PIPE", "type": "Received", "qty": 15.0, "unit": "pcs", "by": "Warehouse", "location": "", "remarks": ""}, {"id": "tx-16", "date": "2026-06-25", "ref": "BHR250826.23", "code": "VIBROPIPE-1", "description": "VIBRO 1/2 FLEX PIPE", "type": "Received", "qty": 15.0, "unit": "pcs", "by": "Warehouse", "location": "", "remarks": ""}, {"id": "tx-17", "date": "2026-06-25", "ref": "BHR250826.23", "code": "FCONTR", "description": "FAN SPEED CONTROLLER", "type": "Received", "qty": 5.0, "unit": "pcs", "by": "Warehouse", "location": "", "remarks": ""}, {"id": "tx-18", "date": "2026-06-25", "ref": "BHR250826.23", "code": "FLUSHFLUD", "description": "FLUSHING LIQIUD", "type": "Received", "qty": 5.0, "unit": "pcs", "by": "Warehouse", "location": "", "remarks": ""}, {"id": "tx-19", "date": "2026-06-25", "ref": "BHR250826.23", "code": "MODCONTR", "description": "25A MODULAR CONTACTOR ", "type": "Received", "qty": 10.0, "unit": "pcs", "by": "Warehouse", "location": "", "remarks": ""}, {"id": "tx-20", "date": "2026-06-25", "ref": "BHR250826.23", "code": "AXU18A", "description": "CONTACTOR 18A AXU", "type": "Received", "qty": 5.0, "unit": "pcs", "by": "Warehouse", "location": "", "remarks": ""}, {"id": "tx-21", "date": "2026-09-28", "ref": "BHR250826.23", "code": "HPLP", "description": "HP/LP MANUAL PRESSURE SWITCH", "type": "Used", "qty": 1.0, "unit": "pcs", "by": "GOPI", "location": "Cold Room / Freezer", "remarks": "Poulity Coldroom"}, {"id": "tx-22", "date": "2026-09-02", "ref": "BHR250826.23", "code": "SNET", "description": "SAMSUNG SNET DONGLE", "type": "Used", "qty": 1.0, "unit": "pcs", "by": "Warehouse", "location": "MAINTENANCE", "remarks": "For Maintenance team "}, {"id": "tx-23", "date": "2026-07-28", "ref": "BHR030626.01", "code": "KCM514CAL-E512H", "description": "380v Comp R404 MHBP Rotolock", "type": "Used", "qty": 1.0, "unit": "pcs", "by": "Warehouse", "location": "Cold Room / Freezer", "remarks": "MCC COLDROOM"}], "orders": [{"id": "ord-5", "proformaDate": "2026-06-02", "proformaNo": "BHR030626.01", "code": "KCM517LAL-E512H", "description": "380v Comp R404 LBP Rotolock", "ordered": 2.0, "received": 2.0, "receivedDate": "2026-06-02", "notes": "Received from proforma invoice"}, {"id": "ord-6", "proformaDate": "2026-06-02", "proformaNo": "BHR030626.01", "code": "KCM514CAL-E512H", "description": "380v Comp R404 MHBP Rotolock", "ordered": 2.0, "received": 2.0, "receivedDate": "2026-06-02", "notes": "Received from proforma invoice"}, {"id": "ord-7", "proformaDate": "2026-06-02", "proformaNo": "BHR030626.01", "code": "DLLTK517BZT", "description": "DynaLite CDU Incl Controller 517", "ordered": 1.0, "received": 0.0, "receivedDate": "", "notes": "Pending delivery"}, {"id": "ord-8", "proformaDate": "2026-06-02", "proformaNo": "BHR030626.01", "code": "DLMTK514AZT", "description": "DynaLite CDU Incl Controller 514", "ordered": 1.0, "received": 0.0, "receivedDate": "", "notes": "Pending delivery"}, {"id": "ord-9", "proformaDate": "2026-06-25", "proformaNo": "BHR250826.23", "code": "SNET", "description": "SAMSUNG SNET DONGLE", "ordered": 1.0, "received": 1.0, "receivedDate": "2026-06-25", "notes": "Received from proforma invoice"}, {"id": "ord-10", "proformaDate": "2026-06-25", "proformaNo": "BHR250826.23", "code": "HPLP", "description": "HP/LP MANUAL PRESSURE SWITCH", "ordered": 5.0, "received": 5.0, "receivedDate": "2026-06-25", "notes": "Received from proforma invoice"}, {"id": "ord-11", "proformaDate": "2026-06-25", "proformaNo": "BHR250826.23", "code": "CAP", "description": "CAPILLARY COIL", "ordered": 10.0, "received": 10.0, "receivedDate": "2026-06-25", "notes": "Received from proforma invoice"}, {"id": "ord-12", "proformaDate": "2026-06-25", "proformaNo": "BHR250826.23", "code": "TCUT", "description": "TUBE CUTTER 1/8 TO 1 1/8", "ordered": 1.0, "received": 1.0, "receivedDate": "2026-06-25", "notes": "Received from proforma invoice"}, {"id": "ord-13", "proformaDate": "2026-06-25", "proformaNo": "BHR250826.23", "code": "VIBROPIPE", "description": "VIBRO 7/8 FLEX PIPE", "ordered": 15.0, "received": 15.0, "receivedDate": "2026-06-25", "notes": "Received from proforma invoice"}, {"id": "ord-14", "proformaDate": "2026-06-25", "proformaNo": "BHR250826.23", "code": "VIBROPIPE-1", "description": "VIBRO 1/2 FLEX PIPE", "ordered": 15.0, "received": 15.0, "receivedDate": "2026-06-25", "notes": "Received from proforma invoice"}, {"id": "ord-15", "proformaDate": "2026-06-25", "proformaNo": "BHR250826.23", "code": "FCONTR", "description": "FAN SPEED CONTROLLER", "ordered": 5.0, "received": 5.0, "receivedDate": "2026-06-25", "notes": "Received from proforma invoice"}, {"id": "ord-16", "proformaDate": "2026-06-25", "proformaNo": "BHR250826.23", "code": "FLUSHFLUD", "description": "FLUSHING LIQIUD", "ordered": 5.0, "received": 5.0, "receivedDate": "2026-06-25", "notes": "Received from proforma invoice"}, {"id": "ord-17", "proformaDate": "2026-06-25", "proformaNo": "BHR250826.23", "code": "MODCONTR", "description": "25A MODULAR CONTACTOR ", "ordered": 10.0, "received": 10.0, "receivedDate": "2026-06-25", "notes": "Received from proforma invoice"}, {"id": "ord-18", "proformaDate": "2026-06-25", "proformaNo": "BHR250826.23", "code": "AXU18A", "description": "CONTACTOR 18A AXU", "ordered": 5.0, "received": 5.0, "receivedDate": "2026-06-25", "notes": "Received from proforma invoice"}]};
+const DBNAME='bhr_inventory_v1', STORE='app';
+let state={items:[],transactions:[],orders:[]};
+
+function uid(p){return p+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function localDate(){const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)}
+function db(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DBNAME,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function load(){const d=await db();return new Promise((res,rej)=>{const q=d.transaction(STORE,'readonly').objectStore(STORE).get('state');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function save(){const d=await db();return new Promise((res,rej)=>{const q=d.transaction(STORE,'readwrite').objectStore(STORE).put(state,'state');q.onsuccess=res;q.onerror=()=>rej(q.error)})}
+async function init(){let s=await load(); if(!s){state=SEED;await save()}else state=s; setup(); renderAll();}
+function setup(){
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+['invSearch','invSystem','invStatus'].forEach(id=>document.getElementById(id).addEventListener('input',renderInventory));
+['txFrom','txTo','txSearch','txType'].forEach(id=>document.getElementById(id).addEventListener('input',renderTransactions));
+['ordSearch','ordStatus'].forEach(id=>document.getElementById(id).addEventListener('input',renderOrders));
+document.getElementById('restoreFile').addEventListener('change',restore);
+const y=new Date().getFullYear();document.getElementById('repYear').value=y;
+const ms=['January','February','March','April','May','June','July','August','September','October','November','December'];
+document.getElementById('repMonth').innerHTML=ms.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+document.getElementById('repMonth').value=new Date().getMonth()+1;
+}
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id)); if(id==='dashboard')renderDashboard(); if(id==='inventory')renderInventory(); if(id==='transactions')renderTransactions();if(id==='orders')renderOrders();if(id==='reports')renderReport()}
+function itemByCode(c){return state.items.find(x=>x.code===c)}
+function calcItem(it){const t=state.transactions.filter(x=>x.code===it.code);let rec=0,iss=0,used=0;t.forEach(x=>{if(x.type==='Received')rec+=+x.qty;if(x.type==='Issued')iss+=+x.qty;if(x.type==='Used')used+=+x.qty});return {...it,received:rec,issued:iss,used,closing:+it.opening+rec-iss-used}}
+function status(it){const q=calcItem(it).closing;if(q<=0)return 'OUT';if(q<=+it.minimum)return 'LOW';return 'OK'}
+function renderAll(){renderDashboard();renderInventory();renderTransactions();renderOrders();renderReport()}
+function renderDashboard(){
+const a=state.items.map(calcItem), ok=a.filter(x=>status(x)==='OK').length, low=a.length-ok;
+sItems.textContent=a.length;sOk.textContent=ok;sLow.textContent=low;
+sOrders.textContent=state.orders.filter(o=>o.ordered-o.received>0).length;sTx.textContent=state.transactions.length;
+sReceived.textContent=state.transactions.filter(x=>x.type==='Received').reduce((n,x)=>n+x.qty,0);
+sIssued.textContent=state.transactions.filter(x=>x.type==='Issued').reduce((n,x)=>n+x.qty,0);
+sUsed.textContent=state.transactions.filter(x=>x.type==='Used').reduce((n,x)=>n+x.qty,0);
+const lows=a.filter(x=>status(x)!=='OK');lowList.innerHTML=lows.length?lows.map(x=>`<div style="padding:8px 0;border-bottom:1px solid #eee"><b>${esc(x.code)}</b> — ${esc(x.description)} <span class="badge ${status(x)==='OUT'?'out':'low'}">${status(x)}: ${x.closing} ${esc(x.unit)}</span></div>`).join(''):'<div class="empty">No low-stock items.</div>';
+}
+function fillSystems(){const vals=[...new Set(state.items.map(x=>x.system).filter(Boolean))].sort();invSystem.innerHTML='<option value="">All systems</option>'+vals.map(x=>`<option>${esc(x)}</option>`).join('')}
+function renderInventory(){
+fillSystems();const q=(invSearch.value||'').toLowerCase(), sy=invSystem.value, st=invStatus.value;
+const rows=state.items.map(calcItem).filter(x=>(!q||[x.code,x.description,x.category,x.system].join(' ').toLowerCase().includes(q))&&(!sy||x.system===sy)&&(!st||status(x)===st));
+invBody.innerHTML=rows.length?rows.map((x,i)=>`<tr><td>${x.no||i+1}</td><td><b>${esc(x.code)}</b></td><td>${esc(x.system)}</td><td>${esc(x.description)}</td><td>${esc(x.category)}</td><td>${esc(x.unit)}</td><td>${x.opening}</td><td>${x.received}</td><td>${x.issued}</td><td>${x.used}</td><td><b>${x.closing}</b></td><td>${x.minimum}</td><td><span class="badge ${status(x).toLowerCase()}">${status(x)}</span></td><td class="no-print"><button class="btn ghost" onclick="openItem('${x.code}')">Edit</button> <button class="btn danger" onclick="deleteItem('${x.code}')">Delete</button></td></tr>`).join(''):'<tr><td colspan="14" class="empty">No items found.</td></tr>';
+}
+function renderTransactions(){
+const f=txFrom.value,t=txTo.value,q=(txSearch.value||'').toLowerCase(),typ=txType.value;
+let rows=[...state.transactions].sort((a,b)=>b.date.localeCompare(a.date)).filter(x=>(!f||x.date>=f)&&(!t||x.date<=t)&&(!typ||x.type===typ)&&(!q||[x.code,x.description,x.ref,x.by,x.location,x.remarks].join(' ').toLowerCase().includes(q)));
+txBody.innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.ref)}</td><td><b>${esc(x.code)}</b></td><td>${esc(x.description)}</td><td><span class="badge ${x.type.toLowerCase()}">${esc(x.type)}</span></td><td>${x.qty}</td><td>${esc(x.unit)}</td><td>${esc(x.by)}</td><td>${esc(x.location)}</td><td>${esc(x.remarks)}</td><td class="no-print"><button class="btn ghost" onclick="openTx('${x.id}')">Edit</button> <button class="btn danger" onclick="deleteTx('${x.id}')">Delete</button></td></tr>`).join(''):'<tr><td colspan="11" class="empty">No transactions found.</td></tr>';
+}
+function renderOrders(){
+const q=(ordSearch.value||'').toLowerCase(), st=ordStatus.value;
+let rows=state.orders.filter(o=>{const wait=o.ordered-o.received;const s=wait<=0?'Received':o.received>0?'Partially Received':'Waiting to Receive';return (!st||s===st)&&(!q||[o.proformaNo,o.code,o.description,o.notes].join(' ').toLowerCase().includes(q))});
+ordBody.innerHTML=rows.length?rows.map(o=>{const wait=Math.max(0,o.ordered-o.received),s=wait<=0?'Received':o.received>0?'Partially Received':'Waiting to Receive';return `<tr><td>${esc(o.proformaDate)}</td><td>${esc(o.proformaNo)}</td><td><b>${esc(o.code)}</b></td><td>${esc(o.description)}</td><td>${o.ordered}</td><td>${o.received}</td><td>${wait}</td><td><span class="badge ${s==='Received'?'received':'low'}">${s}</span></td><td>${esc(o.receivedDate)}</td><td>${esc(o.notes)}</td><td class="no-print"><button class="btn ghost" onclick="openOrder('${o.id}')">Edit</button> <button class="btn danger" onclick="deleteOrder('${o.id}')">Delete</button></td></tr>`}).join(''):'<tr><td colspan="11" class="empty">No orders found.</td></tr>';
+}
+function renderReport(){
+const y=+repYear.value,m=+repMonth.value;reportTitle.textContent=`Monthly Inventory Report — ${String(m).padStart(2,'0')}/${y}`;reportSub.textContent=`Opening stock + Received − Issued − Used = Closing stock`;
+const start=`${y}-${String(m).padStart(2,'0')}-01`, next=new Date(y,m,1).toISOString().slice(0,10);
+const rows=state.items.map(it=>{const base=calcItem(it), tx=state.transactions.filter(x=>x.code===it.code&&x.date>=start&&x.date<next);let rec=0,iss=0,used=0;tx.forEach(x=>{if(x.type==='Received')rec+=+x.qty;if(x.type==='Issued')iss+=+x.qty;if(x.type==='Used')used+=+x.qty});const closing=base.opening+base.received-base.issued-base.used;return {...it,rec,iss,used,closing}});
+reportBody.innerHTML=rows.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.code)}</td><td>${esc(x.description)}</td><td>${esc(x.unit)}</td><td>${x.opening}</td><td>${x.rec}</td><td>${x.iss}</td><td>${x.used}</td><td><b>${x.closing}</b></td><td>${x.minimum}</td><td>${x.closing<=0?'OUT':x.closing<=x.minimum?'LOW':'OK'}</td></tr>`).join('');
+const names=['January','February','March','April','May','June','July','August','September','October','November','December'];
+monthBody.innerHTML=names.map((name,i)=>{const mm=String(i+1).padStart(2,'0'),a=state.transactions.filter(x=>x.date>=`${y}-${mm}-01`&&x.date<new Date(y,i+1,1).toISOString().slice(0,10));return `<tr><td>${name}</td><td>${a.filter(x=>x.type==='Received').reduce((n,x)=>n+x.qty,0)}</td><td>${a.filter(x=>x.type==='Issued').reduce((n,x)=>n+x.qty,0)}</td><td>${a.filter(x=>x.type==='Used').reduce((n,x)=>n+x.qty,0)}</td><td>${a.length}</td></tr>`}).join('');
+}
+function modal(title,body){modalTitle.textContent=title;modalBody.innerHTML=body;modal.classList.add('open')} function closeModal(){modal.classList.remove('open')}
+function itemOptions(sel=''){return state.items.map(x=>`<option value="${esc(x.code)}" ${x.code===sel?'selected':''}>${esc(x.code)} — ${esc(x.description)}</option>`).join('')}
+function openItem(code=''){const x=code?itemByCode(code):{code:'',system:'CONSUMABLES',description:'',category:'',unit:'pcs',opening:0,minimum:0};modal('Inventory Item',`<div class="formgrid">
+<div class="field"><label>Item Code</label><input id="fCode" value="${esc(x.code)}" ${code?'readonly':''}></div>
+<div class="field"><label>System</label><input id="fSystem" value="${esc(x.system)}"></div>
+<div class="field"><label>Description</label><input id="fDesc" value="${esc(x.description)}"></div>
+<div class="field"><label>Category</label><input id="fCat" value="${esc(x.category)}"></div>
+<div class="field"><label>Unit</label><input id="fUnit" value="${esc(x.unit)}"></div>
+<div class="field"><label>Opening Quantity</label><input id="fOpen" type="number" step="any" value="${x.opening}"></div>
+<div class="field"><label>Minimum Stock</label><input id="fMin" type="number" step="any" value="${x.minimum}"></div>
+</div><div style="margin-top:15px;text-align:right"><button class="btn primary" onclick="saveItem('${esc(code)}')">Save</button></div>`)}
+async function saveItem(old){const code=fCode.value.trim();if(!code||!fDesc.value.trim())return alert('Item Code and Description are required.');if(!old&&itemByCode(code))return alert('That Item Code already exists.');const obj={no:old?(itemByCode(old).no):state.items.length+1,code,system:fSystem.value.trim(),description:fDesc.value.trim(),category:fCat.value.trim(),unit:fUnit.value.trim(),opening:+fOpen.value||0,minimum:+fMin.value||0};if(old)state.items=state.items.map(x=>x.code===old?obj:x);else state.items.push(obj);await save();closeModal();renderAll()}
+async function deleteItem(code){if(state.transactions.some(x=>x.code===code)||state.orders.some(x=>x.code===code))return alert('This item has transactions or orders. Delete those records first if you really want to remove the item.');if(confirm('Delete this inventory item?')){state.items=state.items.filter(x=>x.code!==code);await save();renderAll()}}
+function openTx(id=''){const x=id?state.transactions.find(a=>a.id===id):{date:localDate(),ref:'',code:state.items[0]?.code||'',type:'Received',qty:1,by:'',location:'',remarks:''};modal('Stock Transaction',`<div class="formgrid">
+<div class="field"><label>Date</label><input id="tDate" type="date" value="${esc(x.date)}"></div><div class="field"><label>Reference No.</label><input id="tRef" value="${esc(x.ref)}"></div>
+<div class="field"><label>Item</label><select id="tCode">${itemOptions(x.code)}</select></div><div class="field"><label>Transaction Type</label><select id="tType">${['Received','Issued','Used'].map(v=>`<option ${v===x.type?'selected':''}>${v}</option>`).join('')}</select></div>
+<div class="field"><label>Quantity</label><input id="tQty" type="number" min="0" step="any" value="${x.qty}"></div><div class="field"><label>Issued / Received By</label><input id="tBy" value="${esc(x.by)}"></div>
+<div class="field"><label>Department / Location</label><input id="tLoc" value="${esc(x.location)}"></div><div class="field"><label>Remarks</label><input id="tRem" value="${esc(x.remarks)}"></div>
+</div><div style="margin-top:15px;text-align:right"><button class="btn primary" onclick="saveTx('${id}')">Save</button></div>`)}
+async function saveTx(id){const it=itemByCode(tCode.value);const obj={id:id||uid('tx'),date:tDate.value,ref:tRef.value,code:tCode.value,description:it?.description||'',type:tType.value,qty:+tQty.value||0,unit:it?.unit||'',by:tBy.value,location:tLoc.value,remarks:tRem.value};if(!obj.date||!obj.code||obj.qty<=0)return alert('Date, item and a quantity greater than zero are required.');if(id)state.transactions=state.transactions.map(x=>x.id===id?obj:x);else state.transactions.push(obj);await save();closeModal();renderAll()}
+async function deleteTx(id){if(confirm('Delete this stock transaction?')){state.transactions=state.transactions.filter(x=>x.id!==id);await save();renderAll()}}
+function openOrder(id=''){const x=id?state.orders.find(a=>a.id===id):{proformaDate:localDate(),proformaNo:'',code:state.items[0]?.code||'',ordered:1,received:0,receivedDate:'',notes:''};modal('Incoming Order',`<div class="formgrid">
+<div class="field"><label>Proforma Date</label><input id="oDate" type="date" value="${esc(x.proformaDate)}"></div><div class="field"><label>Proforma No.</label><input id="oNo" value="${esc(x.proformaNo)}"></div>
+<div class="field"><label>Item</label><select id="oCode">${itemOptions(x.code)}</select></div><div class="field"><label>Quantity Ordered</label><input id="oOrd" type="number" min="0" step="any" value="${x.ordered}"></div>
+<div class="field"><label>Quantity Received</label><input id="oRec" type="number" min="0" step="any" value="${x.received}"></div><div class="field"><label>Received Date</label><input id="oRecDate" type="date" value="${esc(x.receivedDate)}"></div>
+<div class="field" style="grid-column:1/-1"><label>Notes</label><textarea id="oNotes">${esc(x.notes)}</textarea></div>
+</div><div style="margin-top:15px;text-align:right"><button class="btn primary" onclick="saveOrder('${id}')">Save</button></div>`)}
+async function saveOrder(id){const it=itemByCode(oCode.value);const obj={id:id||uid('ord'),proformaDate:oDate.value,proformaNo:oNo.value,code:oCode.value,description:it?.description||'',ordered:+oOrd.value||0,received:+oRec.value||0,receivedDate:oRecDate.value,notes:oNotes.value};if(!obj.code||obj.ordered<=0)return alert('Item and quantity ordered are required.');if(obj.received>obj.ordered)return alert('Received quantity cannot exceed ordered quantity.');if(id)state.orders=state.orders.map(x=>x.id===id?obj:x);else state.orders.push(obj);await save();closeModal();renderAll()}
+async function deleteOrder(id){if(confirm('Delete this incoming order?')){state.orders=state.orders.filter(x=>x.id!==id);await save();renderAll()}}
+function csvCell(v){const s=String(v??'');return '"'+s.replace(/"/g,'""')+'"'}
+function download(name,text,type='text/csv'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportCSV(kind){let rows=[],name='';if(kind==='inventory'){rows=[['No.','Item Code','System','Description','Category','Unit','Opening','Received','Issued','Used','Closing','Minimum','Status'],...state.items.map((it,i)=>{const x=calcItem(it);return [i+1,x.code,x.system,x.description,x.category,x.unit,x.opening,x.received,x.issued,x.used,x.closing,x.minimum,status(x)]})];name='BHR_Inventory.csv'}
+else if(kind==='transactions'){rows=[['Date','Reference','Item Code','Description','Type','Quantity','Unit','By','Location','Remarks'],...state.transactions.map(x=>[x.date,x.ref,x.code,x.description,x.type,x.qty,x.unit,x.by,x.location,x.remarks])];name='BHR_Transactions.csv'}
+else if(kind==='orders'){rows=[['Proforma Date','Proforma No','Item Code','Description','Ordered','Received','Waiting','Status','Received Date','Notes'],...state.orders.map(x=>[x.proformaDate,x.proformaNo,x.code,x.description,x.ordered,x.received,Math.max(0,x.ordered-x.received),x.received>=x.ordered?'Received':x.received>0?'Partially Received':'Waiting to Receive',x.receivedDate,x.notes])];name='BHR_Incoming_Orders.csv'}
+else {const y=+repYear.value,m=+repMonth.value,start=`${y}-${String(m).padStart(2,'0')}-01`,next=new Date(y,m,1).toISOString().slice(0,10);rows=[['No.','Item Code','Description','Unit','Opening','Received','Issued','Used','Closing','Minimum','Status'],...state.items.map((it,i)=>{const tx=state.transactions.filter(x=>x.code===it.code&&x.date>=start&&x.date<next);let r=0,ii=0,u=0;tx.forEach(x=>{if(x.type==='Received')r+=x.qty;if(x.type==='Issued')ii+=x.qty;if(x.type==='Used')u+=x.qty});const c=it.opening+state.transactions.filter(x=>x.code===it.code&&x.date<next).reduce((n,x)=>n+(x.type==='Received'?x.qty:-x.qty),0);return [i+1,it.code,it.description,it.unit,it.opening,r,ii,u,c,it.minimum,c<=0?'OUT':c<=it.minimum?'LOW':'OK']})];name=`BHR_Monthly_Inventory_${y}_${String(m).padStart(2,'0')}.csv`}
+download(name,rows.map(r=>r.map(csvCell).join(',')).join('\n'))}
+function backup(){download(`BHR_Inventory_Backup_${localDate()}.json`,JSON.stringify({version:1,exportedAt:new Date().toISOString(),...state},null,2),'application/json')}
+async function restore(e){const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!data.items||!data.transactions||!data.orders)throw Error('Invalid backup');if(!confirm('Restore this backup? Current inventory data will be replaced.'))return;state={items:data.items,transactions:data.transactions,orders:data.orders};await save();renderAll();alert('Backup restored successfully.')}catch(err){alert('Could not restore this backup: '+err.message)}e.target.value=''}
+init();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body>
+</html>
